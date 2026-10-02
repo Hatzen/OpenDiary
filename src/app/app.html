@@ -1,0 +1,21 @@
+<main class="app-root-container">
+  @if (diaryService.currentView() === 'startpage') {
+    <app-startpage></app-startpage>
+  } @else if (diaryService.currentView() === 'editor') {
+    <app-editor></app-editor>
+  }
+
+  <!-- Global Toast Notification -->
+  @if (diaryService.toastMessage()) {
+    <div class="memoiren-toast" [class]="diaryService.toastMessage()!.type">
+      @if (diaryService.toastMessage()!.type === 'success') {
+        <span>✓</span>
+      } @else if (diaryService.toastMessage()!.type === 'error') {
+        <span>⚠️</span>
+      } @else {
+        <span>ℹ️</span>
+      }
+      <span>{{ diaryService.toastMessage()!.text }}</span>
+    </div>
+  }
+</main>

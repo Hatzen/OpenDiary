@@ -1,0 +1,711 @@
+<div class="editor-container no-print-bg">
+  <!-- TOP APP BAR -->
+  <header class="editor-app-bar no-print">
+    <div class="app-bar-left">
+      <button type="button" class="btn-lock" (click)="lockVault()" title="Lock journal and clear memory">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+        </svg>
+        <span class="btn-text">Lock</span>
+      </button>
+
+      <div class="doc-meta-header">
+        <h1 class="doc-title" title="{{ diaryService.documentTitle() }}">
+          {{ diaryService.documentTitle() }}
+        </h1>
+        <div class="doc-badges">
+          <span class="badge-tag">v{{ diaryService.currentDocument()?.version }}</span>
+          <span class="badge-tag sec">{{ diaryService.currentDocument()?.securityLevel | uppercase }}</span>
+          @if (diaryService.hasUnsavedChanges()) {
+            <span class="unsaved-indicator">● Unsaved edits</span>
+          } @else {
+            <span class="saved-indicator">✓ Synced</span>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="app-bar-actions">
+      <!-- Save Button -->
+      <button type="button" class="btn btn-save btn-sm" (click)="handleSave()" title="Save changes to local storage">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Save
+      </button>
+
+      <!-- Snapshots Drawer Toggle -->
+      <button 
+        type="button" 
+        class="btn btn-secondary btn-sm" 
+        [class.btn-active]="isSnapshotsDrawerOpen()"
+        (click)="toggleSnapshotsDrawer()" 
+        title="View automatic encrypted snapshots">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Snapshots
+        @if (snapshots().length > 0) {
+          <span class="count-pill">{{ snapshots().length }}</span>
+        }
+      </button>
+
+      <!-- Git History Drawer Toggle -->
+      <button 
+        type="button" 
+        class="btn btn-secondary btn-sm" 
+        [class.btn-active]="isGitDrawerOpen()"
+        (click)="toggleGitDrawer()" 
+        title="View Git commit timeline">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="6" y1="3" x2="6" y2="15"/>
+          <circle cx="18" cy="6" r="3"/>
+          <circle cx="6" cy="18" r="3"/>
+          <path d="M18 9a9 9 0 0 1-9 9"/>
+        </svg>
+        History
+        @if ((diaryService.currentDocument()?.gitHistory?.length || 0) > 0) {
+          <span class="count-pill">{{ diaryService.currentDocument()?.gitHistory?.length }}</span>
+        }
+      </button>
+
+      <!-- Security & Hints Modal Button -->
+      <button type="button" class="btn btn-secondary btn-sm" (click)="openSecurityModal()" title="View/edit security settings">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        Security
+      </button>
+
+      <!-- Export Modal Button -->
+      <button type="button" class="btn btn-outline btn-sm" (click)="openExportModal()" title="Export or print document">
+        <svg class="icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export
+      </button>
+    </div>
+  </header>
+
+  <!-- WORD-LIKE FORMATTING RIBBON -->
+  <nav class="memoiren-ribbon no-print">
+    <!-- History Group -->
+    <div class="ribbon-group">
+      <button type="button" class="ribbon-btn" (click)="execCmd('undo')" title="Undo (Ctrl+Z)">↶</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('redo')" title="Redo (Ctrl+Y)">↷</button>
+    </div>
+
+    <div class="ribbon-divider"></div>
+
+    <!-- Typography Group -->
+    <div class="ribbon-group">
+      <select 
+        class="ribbon-select font-select" 
+        [value]="settings().fontFamily" 
+        (change)="setFontFamily($any($event.target).value)"
+        title="Font Family">
+        <option value="Inter">Inter (Sans)</option>
+        <option value="'Playfair Display', serif">Playfair Display (Serif)</option>
+        <option value="'Cormorant Garamond', serif">Cormorant Garamond</option>
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="Georgia, serif">Georgia</option>
+      </select>
+
+      <select 
+        class="ribbon-select size-select" 
+        [value]="settings().fontSize" 
+        (change)="setFontSize($any($event.target).value)"
+        title="Font Size">
+        <option value="10pt">10 pt</option>
+        <option value="11pt">11 pt</option>
+        <option value="12pt">12 pt</option>
+        <option value="14pt">14 pt</option>
+        <option value="16pt">16 pt</option>
+        <option value="18pt">18 pt</option>
+        <option value="24pt">24 pt</option>
+      </select>
+
+      <select 
+        class="ribbon-select heading-select" 
+        (change)="formatHeading($any($event.target).value)"
+        title="Text Style">
+        <option value="p">Paragraph</option>
+        <option value="h1">Heading 1</option>
+        <option value="h2">Heading 2</option>
+        <option value="h3">Heading 3</option>
+      </select>
+    </div>
+
+    <div class="ribbon-divider"></div>
+
+    <!-- Formatting Styles -->
+    <div class="ribbon-group">
+      <button type="button" class="ribbon-btn bold-btn" (click)="execCmd('bold')" title="Bold (Ctrl+B)">B</button>
+      <button type="button" class="ribbon-btn italic-btn" (click)="execCmd('italic')" title="Italic (Ctrl+I)">I</button>
+      <button type="button" class="ribbon-btn underline-btn" (click)="execCmd('underline')" title="Underline (Ctrl+U)">U</button>
+      <button type="button" class="ribbon-btn strike-btn" (click)="execCmd('strikeThrough')" title="Strikethrough">S</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('subscript')" title="Subscript">X₂</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('superscript')" title="Superscript">X²</button>
+
+      <!-- Text Color Picker -->
+      <label class="color-picker-label" title="Text Color">
+        <span>A</span>
+        <input type="color" value="#000000" (change)="execCmd('foreColor', $any($event.target).value)" />
+      </label>
+
+      <!-- Highlight Color Picker -->
+      <label class="color-picker-label highlight" title="Highlight Color">
+        <span class="highlight-glyph">HL</span>
+        <input type="color" value="#fef08a" (change)="execCmd('hiliteColor', $any($event.target).value)" />
+      </label>
+    </div>
+
+    <div class="ribbon-divider"></div>
+
+    <!-- Alignment & Lists -->
+    <div class="ribbon-group">
+      <button type="button" class="ribbon-btn" (click)="execCmd('justifyLeft')" title="Align Left">⯬</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('justifyCenter')" title="Center">⯮⯬</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('justifyRight')" title="Align Right">⯮</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('justifyFull')" title="Justify">≡</button>
+
+      <button type="button" class="ribbon-btn" (click)="execCmd('insertUnorderedList')" title="Bullet List">• ≡</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('insertOrderedList')" title="Numbered List">1. ≡</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('indent')" title="Indent">⇥</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('outdent')" title="Outdent">⇤</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('formatBlock', '<blockquote>')" title="Quote">❝</button>
+      <button type="button" class="ribbon-btn" (click)="execCmd('insertHorizontalRule')" title="Divider Line">—</button>
+    </div>
+
+    <div class="ribbon-divider"></div>
+
+    <!-- Insert Tools -->
+    <div class="ribbon-group">
+      <button type="button" class="ribbon-btn text-action" (click)="insertTimestamp()" title="Insert Current Date & Time">
+        Date
+      </button>
+
+      <!-- Callout Dropdown -->
+      <select 
+        class="ribbon-select callout-select" 
+        (change)="insertCallout($any($event.target).value); $any($event.target).value=''"
+        title="Insert Callout Box">
+        <option value="" disabled selected>+ Callout</option>
+        <option value="note">Note Box</option>
+        <option value="confidential">Confidential</option>
+        <option value="quote">Reflection</option>
+        <option value="warning">Important</option>
+      </select>
+
+      <button type="button" class="ribbon-btn text-action" (click)="openTableModal()" title="Insert Table">
+        Table
+      </button>
+
+      <label class="ribbon-btn text-action image-upload-label" title="Insert Inline Image">
+        Image
+        <input type="file" accept="image/*" (change)="onImageUpload($event)" style="display: none;" />
+      </label>
+
+      <button type="button" class="ribbon-btn" (click)="execCmd('removeFormat')" title="Clear Formatting">Clear</button>
+    </div>
+
+    <div class="ribbon-divider"></div>
+
+    <!-- Page Setup & Zoom -->
+    <div class="ribbon-group ml-auto">
+      <select 
+        class="ribbon-select" 
+        [value]="settings().margin" 
+        (change)="setMargin($any($event.target).value)"
+        title="Page Margins">
+        <option value="normal">Normal Margins (25mm)</option>
+        <option value="narrow">Narrow Margins (15mm)</option>
+        <option value="moderate">Moderate (20mm)</option>
+        <option value="wide">Wide Margins (35mm)</option>
+      </select>
+
+      <select 
+        class="ribbon-select" 
+        [value]="settings().zoom" 
+        (change)="setZoom(+$any($event.target).value)"
+        title="Page Zoom">
+        <option [value]="50">50%</option>
+        <option [value]="75">75%</option>
+        <option [value]="100">100%</option>
+        <option [value]="125">125%</option>
+        <option [value]="150">150%</option>
+      </select>
+
+      <div class="theme-toggles">
+        <button 
+          type="button" 
+          class="theme-dot light" 
+          [class.active]="settings().paperTheme === 'light'" 
+          (click)="setPaperTheme('light')" 
+          title="Bright White Paper">
+        </button>
+        <button 
+          type="button" 
+          class="theme-dot sepia" 
+          [class.active]="settings().paperTheme === 'sepia'" 
+          (click)="setPaperTheme('sepia')" 
+          title="Warm Parchment Paper">
+        </button>
+        <button 
+          type="button" 
+          class="theme-dot dark" 
+          [class.active]="settings().paperTheme === 'dark'" 
+          (click)="setPaperTheme('dark')" 
+          title="Night Slate Paper">
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- DIN A4 WORKSPACE VIEWPORT -->
+  <main class="editor-viewport">
+    <div 
+      class="dina4-page-wrapper" 
+      [style.transform]="'scale(' + (settings().zoom / 100) + ')'">
+      
+      <!-- AUTHENTIC DIN A4 SHEET (210mm x 297mm) -->
+      <article 
+        class="dina4-page" 
+        [class]="'margin-' + settings().margin + ' theme-' + settings().paperTheme"
+        [style.font-family]="settings().fontFamily"
+        [style.font-size]="settings().fontSize"
+        [style.line-height]="settings().lineHeight">
+
+        <!-- Visual Page Header -->
+        <header class="dina4-header">
+          <span class="dina4-header-title">{{ diaryService.documentTitle() }}</span>
+          <span class="dina4-header-date">{{ diaryService.currentDocument()?.lastModified | date:'mediumDate' }}</span>
+        </header>
+
+        <!-- WYSIWYG Editable Document Area -->
+        <div 
+          #editorArea
+          class="dina4-content" 
+          contenteditable="true"
+          (input)="onEditorInput()"
+          spellcheck="true">
+        </div>
+
+        <!-- Visual Page Footer -->
+        <footer class="dina4-footer">
+          <span class="dina4-footer-seal">OpenDiary Encrypted Vault</span>
+          <span class="dina4-page-num">Page 1</span>
+        </footer>
+      </article>
+    </div>
+  </main>
+
+  <!-- BOTTOM STATUS BAR -->
+  <footer class="editor-status-bar no-print">
+    <div class="status-left">
+      <span class="status-item">DIN A4</span>
+      <span class="status-separator">|</span>
+      <span class="status-item"><strong>{{ stats().words }}</strong> words</span>
+      <span class="status-item"><strong>{{ stats().characters }}</strong> characters</span>
+      <span class="status-separator">|</span>
+      <span class="status-item">{{ readingTime() }}</span>
+    </div>
+
+    <div class="status-right">
+      @if (diaryService.lastSnapshotTime()) {
+        <span class="status-item auto-snap">Auto-saved: {{ diaryService.lastSnapshotTime() }}</span>
+        <span class="status-separator">|</span>
+      }
+      <span class="status-item crypto-status">
+        AES-256-GCM • PBKDF2 • Pepper • Static Swap
+      </span>
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- SLIDE-OUT DRAWER: SNAPSHOTS                                              -->
+  <!-- ========================================================================= -->
+  @if (isSnapshotsDrawerOpen()) {
+    <div class="drawer-overlay" (click)="toggleSnapshotsDrawer()">
+      <aside class="drawer-panel" (click)="$event.stopPropagation()">
+        <div class="drawer-header">
+          <div class="drawer-title-wrap">
+            <h3>Encrypted Snapshots</h3>
+            <span class="drawer-sub">Stored in browser localStorage</span>
+          </div>
+          <!-- Prominent X Close Button -->
+          <button type="button" class="drawer-close-btn" (click)="toggleSnapshotsDrawer()" aria-label="Close snapshots drawer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="drawer-actions-bar">
+          <button type="button" class="btn btn-secondary btn-sm" (click)="triggerManualSnapshot()">
+            Take Snapshot Now
+          </button>
+          @if (snapshots().length > 0) {
+            <button type="button" class="btn btn-danger-outline btn-sm" (click)="clearAllSnapshots()">
+              Clear All
+            </button>
+          }
+        </div>
+
+        <div class="drawer-list">
+          @if (snapshots().length === 0) {
+            <div class="drawer-empty">
+              <p>No snapshots taken yet.</p>
+              <span class="drawer-empty-sub">Snapshots are automatically created in the background as you write.</span>
+            </div>
+          } @else {
+            @for (snap of snapshots(); track snap.id) {
+              <div class="snapshot-card">
+                <div class="snap-info">
+                  <div class="snap-time">{{ snap.timestamp | date:'medium' }}</div>
+                  <div class="snap-stats">
+                    <span>v{{ snap.version }}</span> •
+                    <span>{{ snap.wordCount }} words</span> •
+                    <span>{{ (snap.byteSize / 1024) | number:'1.1-1' }} KB</span>
+                  </div>
+                </div>
+
+                <div class="snap-btns">
+                  <button type="button" class="btn btn-primary btn-sm" (click)="restoreSnapshot(snap)" title="Restore this snapshot">
+                    Restore
+                  </button>
+                  <button type="button" class="btn btn-danger-outline btn-sm" (click)="deleteSnapshot(snap, $event)" title="Delete snapshot">
+                    Delete
+                  </button>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </aside>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- SLIDE-OUT DRAWER: GIT HISTORY                                             -->
+  <!-- ========================================================================= -->
+  @if (isGitDrawerOpen()) {
+    <div class="drawer-overlay" (click)="toggleGitDrawer()">
+      <aside class="drawer-panel git-panel" (click)="$event.stopPropagation()">
+        <div class="drawer-header">
+          <div class="drawer-title-wrap">
+            <h3>Commit Timeline</h3>
+            <span class="drawer-sub">Internal encrypted version history</span>
+          </div>
+          <!-- Prominent X Close Button -->
+          <button type="button" class="drawer-close-btn" (click)="toggleGitDrawer()" aria-label="Close history drawer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Commit Form -->
+        <div class="git-commit-box">
+          <label class="form-label" for="commit-msg">Commit Message</label>
+          <div class="commit-input-row">
+            <input 
+              id="commit-msg"
+              type="text" 
+              class="text-input" 
+              [value]="newCommitMessage()" 
+              (input)="newCommitMessage.set($any($event.target).value)" 
+              placeholder="e.g. Completed section 2..." 
+              (keydown.enter)="handleCommit()"
+            />
+            <button type="button" class="btn btn-primary btn-sm" (click)="handleCommit()">
+              Commit
+            </button>
+          </div>
+        </div>
+
+        <!-- Git Timeline Tree -->
+        <div class="git-timeline">
+          @if (!diaryService.currentDocument()?.gitHistory?.length) {
+            <p class="drawer-empty">No commits yet.</p>
+          } @else {
+            @for (commit of diaryService.currentDocument()?.gitHistory; track commit.hash) {
+              <div class="git-node">
+                <div class="git-node-marker">
+                  <div class="git-dot"></div>
+                  <div class="git-line"></div>
+                </div>
+
+                <div class="git-node-body">
+                  <div class="git-meta">
+                    <span class="git-hash">{{ commit.hash }}</span>
+                    <span class="git-time">{{ commit.timestamp | date:'short' }}</span>
+                  </div>
+
+                  <p class="git-msg">{{ commit.message }}</p>
+
+                  <div class="git-stats-row">
+                    <span>{{ commit.stats.words }} words</span>
+                    <div class="git-actions">
+                      <button type="button" class="btn btn-outline btn-xs" (click)="viewCommitDiff(commit)">
+                        Diff
+                      </button>
+                      <button type="button" class="btn btn-secondary btn-xs" (click)="revertToGitCommit(commit)">
+                        Revert
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </aside>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: GIT COMMIT DIFF VIEWER                                             -->
+  <!-- ========================================================================= -->
+  @if (isDiffModalOpen()) {
+    <div class="modal-overlay" (click)="isDiffModalOpen.set(false)">
+      <div class="modal-dialog modal-lg" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Diff against Commit [{{ selectedCommitForDiff()?.hash }}]</h3>
+            <p class="modal-title-target">{{ selectedCommitForDiff()?.message }}</p>
+          </div>
+          <!-- Obvious Close Button -->
+          <button type="button" class="modal-close-btn" (click)="isDiffModalOpen.set(false)" aria-label="Close diff viewer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body diff-viewer-body">
+          <div class="diff-container">
+            @for (line of activeDiffLines(); track $index) {
+              <div class="diff-line" [class]="line.type">
+                <span class="diff-marker">
+                  @if (line.type === 'added') { + }
+                  @else if (line.type === 'removed') { - }
+                  @else { &nbsp; }
+                </span>
+                <span class="diff-text">{{ line.content || ' ' }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isDiffModalOpen.set(false)">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SECURITY & HINTS MANAGEMENT                                        -->
+  <!-- ========================================================================= -->
+  @if (isSecurityModalOpen()) {
+    <div class="modal-overlay" (click)="isSecurityModalOpen.set(false)">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Security Settings</h3>
+            <p class="modal-title-target">Update password reminder hint or change encryption key</p>
+          </div>
+          <!-- Obvious Close Button -->
+          <button type="button" class="modal-close-btn" (click)="isSecurityModalOpen.set(false)" aria-label="Close security settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          @if (securityFormError()) {
+            <div class="error-banner">
+              <span>✕</span>
+              <span>{{ securityFormError() }}</span>
+            </div>
+          }
+
+          <!-- Single Clean Optional Password Hint -->
+          <div class="form-section">
+            <label class="form-label" for="edit-hint">Password Reminder Hint <span class="optional-tag">(Optional)</span></label>
+            <input 
+              id="edit-hint"
+              type="text" 
+              class="text-input" 
+              [value]="editPasswordHint()" 
+              (input)="editPasswordHint.set($any($event.target).value)" 
+              placeholder="e.g. Memory keyword, safe location..."
+            />
+            <span class="helper-text">Stored unencrypted in file header to assist memory.</span>
+          </div>
+
+          <div class="password-box">
+            <h4 class="box-title">Change Master Passphrase (Optional)</h4>
+            <div class="password-grid">
+              <div class="form-section mb-0">
+                <label class="form-label">New Passphrase</label>
+                <input type="password" class="text-input" [value]="changePassword()" (input)="changePassword.set($any($event.target).value)" placeholder="Leave blank to keep current" />
+              </div>
+              <div class="form-section mb-0">
+                <label class="form-label">Confirm New Passphrase</label>
+                <input type="password" class="text-input" [value]="changePasswordConfirm()" (input)="changePasswordConfirm.set($any($event.target).value)" placeholder="Confirm new passphrase" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isSecurityModalOpen.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="saveSecuritySettings()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: EXPORT & PRINT                                                     -->
+  <!-- ========================================================================= -->
+  @if (isExportModalOpen()) {
+    <div class="modal-overlay" (click)="isExportModalOpen.set(false)">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <div>
+            <h3>Export Journal</h3>
+            <p class="modal-title-target">{{ diaryService.documentTitle() }}</p>
+          </div>
+          <!-- Obvious Close Button -->
+          <button type="button" class="modal-close-btn" (click)="isExportModalOpen.set(false)" aria-label="Close export modal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body export-grid">
+          <div class="export-option-card" (click)="exportEncryptedFile()">
+            <div class="exp-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <div class="exp-details">
+              <strong>Encrypted .opendiary File</strong>
+              <span>Protected with AES-256 + Static Swap. Includes optional hint in header.</span>
+            </div>
+          </div>
+
+          <div class="export-option-card" (click)="triggerPrint()">
+            <div class="exp-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+            </div>
+            <div class="exp-details">
+              <strong>Print to DIN A4 / PDF</strong>
+              <span>Clean layout with 210×297mm dimensions, zero UI chrome, ready for printer or PDF save.</span>
+            </div>
+          </div>
+
+          <div class="export-option-card" (click)="exportDecrypted('html')">
+            <div class="exp-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </div>
+            <div class="exp-details">
+              <strong>Decrypted Standalone HTML</strong>
+              <span>Clean formatted web page readable in any browser.</span>
+            </div>
+          </div>
+
+          <div class="export-option-card" (click)="exportDecrypted('txt')">
+            <div class="exp-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <div class="exp-details">
+              <strong>Decrypted Plain Text / Markdown</strong>
+              <span>Raw text file for archiving or backup.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isExportModalOpen.set(false)">Close</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: TABLE GENERATOR                                                    -->
+  <!-- ========================================================================= -->
+  @if (isTableModalOpen()) {
+    <div class="modal-overlay" (click)="isTableModalOpen.set(false)">
+      <div class="modal-dialog" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h3>Insert Table</h3>
+          <!-- Obvious Close Button -->
+          <button type="button" class="modal-close-btn" (click)="isTableModalOpen.set(false)" aria-label="Close table generator">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="table-inputs-grid">
+            <div class="form-section">
+              <label class="form-label">Rows</label>
+              <input type="number" min="1" max="20" class="text-input" [value]="tableRows()" (input)="tableRows.set(+$any($event.target).value)" />
+            </div>
+            <div class="form-section">
+              <label class="form-label">Columns</label>
+              <input type="number" min="1" max="10" class="text-input" [value]="tableCols()" (input)="tableCols.set(+$any($event.target).value)" />
+            </div>
+          </div>
+
+          <label class="checkbox-label">
+            <input type="checkbox" [checked]="tableHasHeader()" (change)="tableHasHeader.set($any($event.target).checked)" />
+            <span>Include Table Header Row</span>
+          </label>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="isTableModalOpen.set(false)">Cancel</button>
+          <button type="button" class="btn btn-primary" (click)="insertCustomTable()">Insert Table</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

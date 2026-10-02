@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Outer Rounded Container -->
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <rect x="1" y="1" width="62" height="62" rx="13" stroke="rgba(245, 158, 11, 0.25)" stroke-width="1.5"/>
+
+  <!-- Open Diary Book Pages -->
+  <path d="M14 20C18 18 26 18 32 21C38 18 46 18 50 20V46C46 44 38 44 32 47C26 44 18 44 14 46V20Z" fill="rgba(255, 255, 255, 0.05)" stroke="url(#gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Book Spine Center Line -->
+  <line x1="32" y1="21" x2="32" y2="47" stroke="url(#gold)" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Subtle Padlock Shackle / Cryptographic Seal -->
+  <path d="M28 27V24C28 21.8 29.8 20 32 20C34.2 20 36 21.8 36 24V27" stroke="url(#gold)" stroke-width="2" stroke-linecap="round"/>
+  <rect x="26" y="27" width="12" height="9" rx="2" fill="url(#gold)"/>
+  <circle cx="32" cy="31.5" r="1.2" fill="#0f172a"/>
+</svg>
