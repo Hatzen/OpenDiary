@@ -2,6 +2,12 @@
 
 **OpenDiary** is a client-side zero-knowledge encrypted personal journal and diary web application built with **Angular (TypeScript)**. It runs entirely inside the user's browser with no server requirement and can be hosted directly as a static webpage on **GitHub Pages**.
 
+
+See https://hatzen.github.io/OpenDiary/ for fully working private dairy. 
+For first test you can use the url like to open an existing diary.
+ https://hatzen.github.io/OpenDiary/fancy_unicorn_fairytale_v3.opendiary
+ or just create a custom one!
+
 ---
 
 ## 🌟 Key Capabilities
